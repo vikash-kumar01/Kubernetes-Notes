@@ -1,0 +1,160 @@
+************Command used in Lecture*********************************
+
+sudo su
+
+Now install docker
+
+sudo apt update && apt -y install docker.io
+
+install Kubectl
+1. curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+2.curl -LO "https://dl.k8s.io/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
+3. sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+4. kubectl version --client
+
+Now install Minikube
+1. curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+sudo install minikube-linux-amd64 /usr/local/bin/minikube
+
+now 
+apt install conntrack
+
+Now start minikube 
+-- > minikube start --vm-driver=none
+
+minikube status 
+------------------------------------------------------------------------------------
+1. Checking no of nodes connected to master
+ kubectl get nodes
+2. more description about nodes
+ kubectl describe node ip-172-31-22-17
+ ***************************************************************************
+kind: Pod                              
+apiVersion: v1                     
+metadata:                           
+  name: testpod                  
+spec:                                    
+  containers:                      
+    - name: c00                     
+      image: ubuntu              
+      command: ["/bin/bash", "-c", "while true; do echo Hello-Bhupinder; sleep 5 ; done"]
+  restartPolicy: Never         # Defaults to Always
+
+kubectl apply -f pod1.yml
+ kubectl get pods
+ 
+ 
+ #ips of node & Pod---------
+ kubectl get pods -o wide
+ #more info+events -----------------------
+ kubectl describe pod testpod
+ --------------------------------------------------------
+whats going in container if(1 pod and 1 container )?
+kubectl logs -f testpod
+----------------------------------------------------------------
+whats going in specific container if(1 pod and n container )?
+kubectl logs -f testpod -c c00
+------------------------------------------------------------------------
+Delete pod
+kubectl delete pod testpod
+
+*******************************************************Annotation*****************************************************************************
+kind: Pod                              
+apiVersion: v1                     
+metadata:                           
+  name: testpod  
+  annotations:
+     description: 2nd pod is getting created   
+spec:                                    
+  containers:                      
+    - name: c00                     
+      image: ubuntu              
+      command: ["/bin/bash", "-c", "while true; do echo Hello-Bhupinder; sleep 5 ; done"]
+  restartPolicy: Never         # Defaults to Always
+  
+  
+************************************************************************************************************************************
+MULTI CONTAINER POD ENVIRONMENT 
+
+kind: Pod
+apiVersion: v1
+metadata:
+  name: testpod3
+spec:
+  containers:
+    - name: c00
+      image: ubuntu
+      command: ["/bin/bash", "-c", "while true; do echo Technical-Guftgu; sleep 5 ; done"]
+    - name: c01
+      image: ubuntu
+      command: ["/bin/bash", "-c", "while true; do echo Hello-Bhupinder; sleep 5 ; done"]
+
+
+Running
+---------------------------
+> kubectl apply -f multicontainer.yml
+
+checking logs of specific container
+>  kubectl logs -f testpod3 -c c00
+   or 
+>  kubectl logs -f testpod3 -c c01   
+-------------------------------------------
+container doesnt have iP so !! how to know like container running on which pod ?
+
+> kubectl exec testpod3 -c c00 -- hostname -i 
+or 
+> kubectl exec testpod3 -c c01 -- hostname -i
+#both will return same ip because running on same pod  
+
+
+Entering into any Container ??
+
+> kubectl exec testpod3 -it -c c00 -- /bin/bash
+
+Deleting Pods through Yaml file 
+> kubectl delete -f  multicontainer.yml
+
+
+*******************************************POD ENVIRONMENT VARIABLES**************************************************************************************
+
+kind: Pod
+apiVersion: v1
+metadata:
+  name: environments
+spec:
+  containers:
+    - name: c00
+      image: ubuntu
+      command: ["/bin/bash", "-c", "while true; do echo Hello-Bhupinder; sleep 5 ; done"]
+      env:                        # List of environment variables to be used inside the pod
+      - name: MYNAME
+        value: BHUPINDER
+		
+		
+ kubectl apply -f env.yml
+ 
+ Getting into the Container to check Env Value
+> kubectl exec environments -it -- /bin/bash
+
+echo $MYNAME
+
+
+
+*************************************************POD WITH PORTS***********************************************************************************
+kind: Pod
+apiVersion: v1
+metadata:
+  name: testpod4
+spec:
+  containers:
+    - name: c00
+      image: httpd
+      ports:
+       - containerPort: 80  
+	   
+	   
+	  
+checking port oppen or not 
+curl <ip of pod> 
+
+*********************END**************************************************
