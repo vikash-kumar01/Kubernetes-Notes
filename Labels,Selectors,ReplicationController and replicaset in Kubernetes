@@ -1,1 +1,154 @@
-.
+******************YAML Files used in demo*************************
+
+EXAMPLE OF LABELS
+
+
+kind: Pod
+apiVersion: v1
+metadata:
+  name: delhipod
+  labels:                                                   
+    env: development
+    class: pods
+spec:
+    containers:
+       - name: c00
+         image: ubuntu
+         command: ["/bin/bash", "-c", "while true; do echo Hello-Bhupinder; sleep 5 ; done"]
+
+Checking the labels on pods
+
+ > kubectl get pods --show-labels #equality based labels(eg class= pos)
+ 
+We can Use yml(scriptive way) or declarative way 
+
+> kubectl label pods delhipod myname=vikash  
+
+finding/filtering/delete pods by LABEL ??
+----------------------------------------------------------------------------------
+> kubectl get pods -l env=development  #Equality based
+    or 
+> kubectl get pods -l env!=development
+  or 
+>  kubectl delete pod -l env!=dev
+
+#Set based
+>kubectl get pods -l 'env in (dev,testing)'
+or
+> kubectl get pods -l 'env notin (dev,testing)' 
+
+kubectl get pods -l class=pods,env=test  #muluple equality based
+
+
+***********************************NODE SELECTOR EXAMPLE****************************************
+#Choosing Node to Deploy POD // Run the pod to specific Node ...
+
+kind: Pod
+apiVersion: v1
+metadata:
+  name: nodelabels
+  labels:
+    env: development
+spec:
+    containers:
+       - name: c00
+         image: ubuntu
+         command: ["/bin/bash", "-c", "while true; do echo Hello-vikash; sleep 5 ; done"]
+    nodeSelector:                                         
+       hardware: t2-medium
+	  
+	  
+	  
+	  
+labeling a Node to execute -
+> kubectl get nodes
+>  kubectl label nodes ip-172-31-22-17 hardware=t2.medium
+
+
+*****************************************************************************************************
+EXAMPLE OF REPLICATION CONTROLLER (If 1 goes Down Another container with same funtionality comes up but with different id + to provide 24/7 service)
+# replicas = 2 (Maintains Actual state = desired state, even if 1 fails get created and available with diff id )
+# replicas =  2 (2 identical pods will be getting created )
+#selector and label should match then only it'll be created
+#works on Equality based selector
+
+kind: ReplicationController               
+apiVersion: v1
+metadata:
+  name: myreplica
+spec:
+  replicas: 2            
+  selector:                                                        #pods with myname=vikash will be selected
+    myname: vikash                             
+  template:                
+    metadata:
+      name: replicapod                                             #name of pod
+      labels:            
+        myname: vikash
+    spec:
+     containers:
+       - name: c00
+         image: ubuntu
+         command: ["/bin/bash", "-c", "while true; do echo Hello-vikash; sleep 5 ; done"]
+
+> kubectl apply -f rc.yml
+list rc 
+
+> kubectl get rc
+
+> kubectl describe rc myreplica
+
+we can delete one pod and test
+
+> kubectl delete pods myreplica-cz58j
+
+############Scaling up using commad>>>>>>>>>>>>>>>>
+
+# kubectl scale --<replicas= ?> rc 
+> kubectl scale --replicas=8 rc -l myname=vikash                 
+> check -->  kubectl get rc
+
+##############Scale down>>>>>>>>>>>>>>>>>>>>>
+
+> kubectl scale --replicas=1 rc -l myname=vikash
+now check number of replica contraoller
+> kubectl get rc
+
+****************************************EXAMPLE OF REPLICA SET************************************************************************
+
+#Advanced version of RC
+#work on principle of (equality based selector+Set based)
+#apiVersion = apps/v1
+#kind= ReplicaSet
+
+kind: ReplicaSet                                    
+apiVersion: apps/v1                            
+metadata:
+  name: myrs
+spec:
+  replicas: 2  
+  selector:                  
+    matchExpressions:                             # these must match the labels
+      - {key: myname, operator: In, values: [vikash, vikas, vkash]}
+      - {key: env, operator: NotIn, values: [production]}
+  template:      
+    metadata:
+      name: testpod7
+      labels:              
+        myname: vikash
+    spec:
+     containers:
+       - name: c00
+         image: ubuntu
+         command: ["/bin/bash", "-c", "while true; do echo vikash; sleep 5 ; done"]
+
+
+>  kubectl apply -f replica_set.yml
+> kubectl get rs
+> kubectl get pods
+#SCALE DOWN >>
+
+>  kubectl scale --replicas=1 rs/myrs
+
+
+***************************************END******************************
