@@ -1,0 +1,284 @@
+==============================================
+LEC-51 DEVOPS TECHNICAL GUFTGU NOTES
+====================
+ Install Docker
+$  sudo apt update && apt -y install docker.io
+
+ Install kubectl
+$  curl -LO https://storage.googleapis.com/kubern... -s https://storage.googleapis.com/kubern... &&   chmod +x ./kubectl && sudo mv ./kubectl /usr/local/bin/kubectl
+
+ Install Minikube
+$  curl -Lo minikube https://storage.googleapis.com/miniku... && chmod +x minikube && sudo mv minikube /usr/local/bin/
+
+ Start Minikube
+$  apt install conntrack
+$  minikube start --vm-driver=none
+$  minikube status
+====================================================================================================================================
+KUBERNETES NETWORKING
+====================================================================================================================================
+1. Containers dont have ip only POD HAve if PoD have 2 containers then it'll communicate via LOCALHOST inside a cluster only not outside(internet)
+2. Clusters are groups of objects (eg nodes, pods)
+====================================================================================================================================
+###########LAB1 >> Container to container communication within same POD (form c00 to c01)same Node
+====================================================================================================================================
+
+
+kind: Pod
+apiVersion: v1
+metadata:
+  name: testpod
+spec:
+  containers:
+    - name: c00
+      image: ubuntu
+      command: ["/bin/bash", "-c", "while true; do echo Hello-vikash; sleep 5 ; done"]
+    - name: c01
+      image: httpd
+      ports:
+       - containerPort: 80
+	   
+1. kubectl apply -f container_to_container_contact.yml
+2. kubectl get pods
+## going to ubuntu container to access apache container
+3. kubectl exec testpod -c c00 -it -- /bin/bash 
+4. install curl on c00(ubuntu container) --> apt update && apt install curl -y 
+5. curl localhost:80     #form c00 trying to connect c01 on port 80 and it works
+6. kubectl delete -f container_to_container_contact.yml
+====================================================================================================================================
+====================================================================================================================================
+====================================================================================================================================
+====================================================================================================================================
+====================================================================================================================================
+====================================================================================================================================
+====================================================================================================================================
+====================================================================================================================================
+###########LAB2 >> Container to container communication from different POD's  same Node(form c00 to c01)
+====================================================================================================================================
+====================================================================================================================================
+1. we know that PODS have IP address through which POD's Containers can communicate (Each PODS HAVE 1 container)
+2. By default PODS IP cant be accessible outside NODE
+====================================================================================================================================
+
+STEP 1: Applying 2 PODS (testpod1(nginx container) & testpod2(apache container))
+
+kind: Pod
+apiVersion: v1
+metadata:
+  name: testpod1
+spec:
+  containers:
+    - name: c00
+      image: nginx
+      command: ["/bin/bash", "-c", "while true; do echo nginx container; sleep 5 ; done"]
+      ports:
+       - containerPort: 80
+	   
+	   
+kind: Pod
+apiVersion: v1
+metadata:
+  name: testpod1
+spec:
+  containers:
+    - name: c01
+      image: httpd
+      command: ["/bin/bash", "-c", "while true; do echo Apache container; sleep 5 ; done"]
+      ports:
+       - containerPort: 80
+
+STEP2:  
+ > kubectl get pods
+ > kubectl get pods -o wide
+ > kubectl curl IP1:80   #Accessible
+ > kubectl curl IP2:80   #Accessible 
+
+====================================================================================================================================
+====================================================================================================================================
+============================================================SERVICE=======================================================================
+POD"S can be re-created(if Replica set = n), then everytime it'll create POD with new IP, may be in same/different node. How we'll take care 
+of it ? do we need to remember again and again POD Ip to access it???
+====================================================================================================================================
+If we apply service on any object, it'll provide a VIRTUAL IP(VIP) to the Object, VIP'll be mapped to Replica set POD's IP, so we always need 
+to remember now the VIP Instead of Particular POD's IP. Even if the POD'll get destroyed and re-created anywhere Replica set will again map the 
+VIP with the New POD IP.
+#kind = SERVICE
+#logical bridge between POD and user
+** Each POD have unique IP but can't be accessed outside of Cluter, SERVICE helps to expose the VIP mapped to POD"S and allows application to recieve 
+traffice**
+* LABELS are used to select POD's to keep under SERVICE.
+**Creating a service will create an ENDPOINT to to access the PODS/ Applications in it.
+##########4 types
+i) ClusterIP(default) II)NODEPORT III) LOADBALANCER IV)HEADLESS
+--------------------------------------------------------------------------------------
+VIP sits on the top of cluster, cant be accessed outside of cluster (INSIDE a Cluster NODE1 And Node2 have container c00 and c01 wants to communicate
+then clusterip helps)
+
+ii) NODEPORT
+-------------------------------------------------------------------------------------
+1.Make a service accessible outsideof cluster
+2. accessing POD's Container by IP:port(30,000-32,767)
+
+* By default service can run only between ports 30,000-32,767
+====================================================================================================================================
+====================================================================================================================================
+====================================================================================================================================
+====================================================================================================================================
+###########LAB3 >> Container to container communication from different POD's  different Node(form c00 to c01)
+====================================================================================================================================
+====================================================================================================================================
+
+====================================================================================================================================
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+   name: mydeployments
+spec:
+   replicas: 1
+   selector:      # tells the controller which pods to watch/belong to
+    matchLabels:
+     name: deployment
+   template:
+     metadata:
+       name: testpod1
+       labels:
+         name: deployment
+     spec:
+      containers:
+        - name: c00
+          image: httpd
+          ports:
+          - containerPort: 80
+====================
+kind: Service                             # Defines to create Service type Object
+apiVersion: v1
+metadata:
+  name: demoservice
+spec:
+  ports:
+    - port: 80                               # Containers port exposed
+      targetPort: 80                     # Pods port
+  selector:
+    name: deployment                    # Apply this service to any pods which has the specific label
+  type: ClusterIP                       # Specifies the service type i.e ClusterIP or NodePort
+
+$ kubectl get svc   # listing services and ClusterIP
+
+1. kubectl get pods -o wide
+2. curl ip:80 # Apache works 
+#. Now delete the POD and Run again
+3. kubectl get svc
+4. kubectl clusterip:80 #accessed cuzz its mapped with IP
+
+======================================================================NODEPORT==============================================================
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+   name: mydeployments
+spec:
+   replicas: 1
+   selector:      # tells the controller which pods to watch/belong to
+    matchLabels:
+     name: deployment
+   template:
+     metadata:
+       name: testpod1
+       labels:
+         name: deployment
+     spec:
+      containers:
+        - name: c00
+          image: httpd
+          ports:
+          - containerPort: 80
+====================
+kind: Service                             # Defines to create Service type Object
+apiVersion: v1
+metadata:
+  name: demoservice
+spec:
+  ports:
+    - port: 80                               # Containers port exposed
+      targetPort: 80                     # Pods port
+  selector:
+    name: deployment                    # Apply this service to any pods which has the specific label
+  type: NodePort                       # Specifies the service type i.e ClusterIP or NodePort
+
+$ kubectl get svc   # listing services and ClusterIP
+> kubectl describe svc demoservice 
+# now type it shows "NodePort"
+# once we enable port 31379 to our security group and in browse we try public_ip:31379 we see it works
+==============================================================================================================================================
+                                                          volume labs
+==============================================================================================================================================
+1. A Volume attached wuth PODS which is shared across the containers
+a) if containers deleted volume remains safe and the new up container gets access of volume again
+b) if POD's get deleted Volume too losts
+
+Two types >> I)EMPTYDIR 
+a)when we want to share content between multiple containers on the same POD not on the HOSTMACHINE
+b)Exists as long as POD running on the NODE
+------------------------------------------------
+II)HOSTPATH
+====================================================================================================================================
+====================================================================================================================================
+===================================================================================================================================
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myvolemptydir
+spec:
+  containers:
+  - name: c1
+    image: centos
+    command: ["/bin/bash", "-c", "sleep 15000"]
+    volumeMounts:                                    # Mount definition inside the container
+      - name: xchange
+        mountPath: "/tmp/xchange"          
+  - name: c2
+    image: centos
+    command: ["/bin/bash", "-c", "sleep 10000"]
+    volumeMounts:
+      - name: xchange
+        mountPath: "/tmp/data"
+  volumes:                                                   
+  - name: xchange
+    emptyDir: {}
+1. volumeMounts name should be same as volumes name(eg: xchange here )
+2. volumeMounts done along with path 
+#############
+3. kubectl exec myvolemptydir - c c1 -it -- /bin/bash
+## create file and check in other c2 container
+5. kubectl exec myvolemptydir - c c2 -it -- /bin/bash   #it works 
+6. kubectl delete -f emptyDir.yml
+
+================================================================================================================================================
+HOST PATH
+================================================================================================================================================
+### if one POD want to Access DATA of Another POD then Use HOSTPATH########
+### Now volume will be in Host Storage so no Data Loss here if POD gets DOWN..... ####
+================================================================================================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myvolhostpath
+spec:
+  containers:
+  - image: centos
+    name: testc
+    command: ["/bin/bash", "-c", "sleep 15000"]
+    volumeMounts:
+    - mountPath: /tmp/hostpath               # testvolume mounted to /tmp/hostpath
+      name: testvolume
+  volumes:
+  - name: testvolume
+    hostPath:
+      path: /tmp/data                         #Volume mapped to host's storage /tmp/data location
+	  
+	  
+1. create a file at hosts /tmp/data path >> myfile
+2. login to container and check the file
+3. kubectl exec 
