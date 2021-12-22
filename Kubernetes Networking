@@ -1,5 +1,5 @@
 ==============================================
-LEC-51 DEVOPS TECHNICAL GUFTGU NOTES
+
 ====================
  Install Docker
 $  sudo apt update && apt -y install docker.io
@@ -281,4 +281,4 @@ spec:
 	  
 1. create a file at hosts /tmp/data path >> myfile
 2. login to container and check the file
-3. kubectl exec 
+3.  kubectl exec myvolhostpath -c testc -it -- /bin/bash 
