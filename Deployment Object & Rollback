@@ -1,1 +1,77 @@
 
+****************************************************************
+
+sudo su
+
+command to install docker is
+
+sudo apt update && apt -y install docker.io
+
+install Kubectl now with the given link
+
+curl -LO https://storage.googleapis.com/kubern... -s https://storage.googleapis.com/kubern... && chmod +x ./kubectl && sudo mv ./kubectl /usr/local/bin/kubectl
+
+install Minikube with the given link
+
+curl -Lo minikube https://storage.googleapis.com/miniku... && chmod +x minikube && sudo mv minikube /usr/local/bin/
+
+apt install conntrack
+
+minikube start --vm-driver=none
+minikube status
+kubectl version
+kubectl get nodes
+
+******************************
+# Deployment sits as a layer on the top of Replica sets and acts as a supervisor.
+# kind = deployment
+# Any new update in the code it maintains as a version. We can rollback even to go to the prev versions.
+# After rollback number of current pods will be same just the previous version of code we can use. 
+#if we rollback pods will be recreated but the prev version replica set will be remain same.
+#scale up & scale down to facilitates loads.
+#
+
+#turnon vm and 'minikube start'
+1. kubectl apply -f deployments.yml
+2. kubectl get deploy
+3. kubectl describe deploy mydeployments
+4. kubectl get rs    #shows value of replica set (which we mentioned 2)
+5. kubectl scale --replicas=1 deploy mydeployments (mydeployments -> object name of deployments)
+6. logs ==> kubectl logs -f mydeployments-6d7c6f4bd7-drs55
+
+#now lets change into our existing file like image= ubuntu & echo "latest version" and appply again
+1. kubectl apply -f deployments.yml
+2. kubectl get pods
+3.  kubectl get rs # we can see prev RS is turned off (eg value =0)
+4.  kubectl logs -f mydeployments-6c58f9d49b-8qlvs  # we can see the the latert verion update here 
+5. kubectl exec mydeployments-6c58f9d49b-8qlvs -it -- cat /etc/os-release # latest os-release
+
+# Rolling out to previous verion>>>>>>>>>>>>>>>>
+1.  kubectl rollout status deployment mydeployments
+2. kubectl rollout history deployment mydeployments
+3. Rolled back to prev version --> kubectl rollout undo deploy mydeployments    #no of pods will be same as latest just the version of code 
+   will be changed with new pods(it'll recreate the pods with prev versions of code)
+   
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+   name: mydeployments                    #object name of deployment
+spec:
+   replicas: 2
+   selector:     
+    matchLabels:
+     name: deployment
+   template:
+     metadata:
+       name: testpod
+       labels:
+         name: deployment
+     spec:
+      containers:
+        - name: c00
+          image: ubuntu
+          command: ["/bin/bash", "-c", "while true; do echo Mr.vikash; sleep 5; done"]
+
+
+********************************************END*********************
