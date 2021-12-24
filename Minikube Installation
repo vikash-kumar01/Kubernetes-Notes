@@ -22,6 +22,10 @@ apt install conntrack
 Now start minikube 
 -- > minikube start --vm-driver=none
 
+Then,
+  - sudo mv /root/.kube /root/.minikube $HOME
+  - sudo chown -R $USER $HOME/.kube $HOME/.minikube
+
 minikube status 
 ------------------------------------------------------------------------------------
 1. Checking no of nodes connected to master
