@@ -1,1 +1,126 @@
+ Start Minikube
+$  apt install conntrack
+$  minikube start --vm-driver=none
+$  minikube status
+====================================================================================================================================
+PERSISTENT VOLUME
+===================================================================================================================================
+1. All the Worker Nodes inside a cluster can access persistent volume.
+2. It'a an always available volume.
+3. Even if any pods fails get recreated again this volumes remains always.
+4. No local storage concept here, we use EBS or NFS or Distributed filesystem.
+5. Example we take huge VOLUME and creates n volume from it and once we create a POD we need to claim volume through menifest file to mount in Pod
+   and it depends in which persistent volume required storage is present.
+6. PVC request a PV.
 
+Step 1: Create a Volume in same Availability Zone in which VM's volume existing.
+step 2: and take the volume ID for menifest
+====================================================================================================================================
+mypv.yml
+------------------
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: myebsvol
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  awsElasticBlockStore:
+    volumeID: vol-0b7b3291e92853210          # YAHAN APNI EBS VOLUME ID DAALO
+    fsType: ext4
+	
+>  kubectl apply -f mypv.yml
+>  kubectl get pv
+>  kubectl apply -f mypvc.yml
+>  kubectl get pvc
+>  kubectl apply -f deploypvc.yml
+>  kubectl get deploy
+Now checking the mount "/tmp/persistent"....by entering into POD
+> kubectl get PODs
+> kubectl exec pod_name -it -- /bin/bash     >> Creeate a file and delete this POD because its a replica and it'll create 1 again so lets see out file in new Container 
+> kubectl delete pods pod_name
+> exec new container and see the file !!! done :)
+============
+mypvc.yml
+----------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myebsvolclaim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+==================================================================================================================
+deploypvc.yml
+--------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pvdeploy
+spec:
+  replicas: 1
+  selector:      # tells the controller which pods to watch/belong to
+    matchLabels:
+     app: mypv
+  template:
+    metadata:
+      labels:
+        app: mypv
+    spec:
+      containers:
+      - name: shell
+        image: centos
+        command: ["bin/bash", "-c", "sleep 10000"] 
+        volumeMounts:
+        - name: mypd
+          mountPath: "/tmp/persistent"
+      volumes:
+        - name: mypd
+          persistentVolumeClaim:
+            claimName: myebsvolclaim                    #It'll be mounted with our 1GB PV Claim in "mypvc.yml"
+			
+			
+==========================================================================================================================
+HEALTHCHECK/LIVENESSPROBE
+==========================================================================================================================
+1. Kubernetes check the replica sets and keep creating the PODs if anyDown but What about the running application inside any of PODs Container??
+2. We check health od container by using LIVENESSPROBE (HEALTHCHECK MECHANISM) under ceartain period of time and decide based on the response..
+3. if cmd succeds, it returns 0 so its shows alive & healthy
+
+==========================================================================================================================
+livenessprove.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    test: liveness
+  name: mylivenessprobe
+spec:
+  containers:
+  - name: liveness
+    image: ubuntu
+    args:
+    - /bin/sh
+    - -c
+    - touch /tmp/healthy; sleep 1000   # [cat /tmp/healthy] delay=5s timeout=30s period=5s #success=1 #failure=3 if fails 3 times then only kill
+    livenessProbe:                                          
+      exec:
+        command:                                         
+        - cat                
+        - /tmp/healthy
+      initialDelaySeconds: 5          ## After 5 sec starts checking.. untill new contaier wakes up
+      periodSeconds: 5                # periodically after every 5 sec cehck..
+      timeoutSeconds: 30              # till 30 sec if we dont get any response kill container and recreated                  
+--------------------------------------------------------------------------------------------------------------------------------------
+##########steps
+1. kubectl describe pods mylivenessprobe
+2. kubectl exec mylivenessprobe -it -- /bin/bash
+3. now to to specified location and run a command "echo $?" if returns 0 then status is healthy
+4. if we remove /tmp/healthy file then we'll not get expected output because healthcheck fails now
