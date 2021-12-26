@@ -1,1 +1,64 @@
 
+####################3Kubernetes pod autoscaler using custom metrics
+1. Horizontal POD Autoscaler helps to achieve this !!
+2. default time to check 30s by HPA
+========================================================================================================================================
+1. kubernetes has possibility to automatically scale PODS based on observed CPU Utilization which is HPA.
+2. Scaling can be done only for scalable objects like controller, deployments amd RS
+3. HPA implemented as KUbernetes API RESOURCE and a container 
+4. Controller periodicallly adjustts the no of replicas in a replication controller/ deployment to match the observed arrange CPU utilization 
+   to the target specified by user
+5. During each period, the control manager queries the resource utilization against the metrices specified in each HPA defination.
+========================================================================================================================================
+$ wget -O metricserver.yml  https://github.com/kubernetes-sigs/metrics-server/releases/download/metrics-server-helm-chart-3.7.0/components.yaml
+
+
+opem metricserver.yml and Go to kind:deployment and add one more line 
+- --kubelet-insecure-tls
+>  kubectl apply -f metricserver.yml
+>  kubectl get pods -n kube-system
+## to see loga 
+> kubectl logs -f metrics-server-7795cfc6ff-n8cd5 -n kube-system
+>  kubectl apply -f deploy_HPS.yml
+> kubectl get all
+#now to configure HPA
+> kubectl autoscale deployment mydeploy --cpu-percent=20 --min=1 --max=10
+## we can see by 
+> kubectl get all
+> watch kubectl get all
+
+##login same server go inside the container and keepon trying updae commands
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+deploy_HPS.yml
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+   name: mydeploy
+spec:
+   replicas: 1
+   selector:
+    matchLabels:
+     name: deployment
+   template:
+     metadata:
+       name: testpod8
+       labels:
+         name: deployment
+     spec:
+      containers:
+        - name: c00
+          image: httpd
+          ports:
+          - containerPort: 80
+          resources:
+            limits:
+              cpu: 500m
+            requests:
+              cpu: 200m
+---------------------
+$ kubectl autoscale deployment mydeploy --cpu-percent=20 --min=1 --max=10
+
+#cpu limit is 20% , if load goes more higher than that autoscale
+--------------
