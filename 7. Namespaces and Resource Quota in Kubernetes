@@ -45,7 +45,7 @@ spec:
   containers:                      
     - name: c00                     
       image: ubuntu              
-      command: ["/bin/bash", "-c", "while true; do echo Technical Guftgu; sleep 5 ; done"]
+      command: ["/bin/bash", "-c", "while true; do echo vikash; sleep 5 ; done"]
   restartPolicy: Never       
 ==============STEPS===================================================================================================================================
 1.  kubectl apply -f namespace.yml
