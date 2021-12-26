@@ -1,1 +1,66 @@
 
+Namespace provides an additional qualification to a resource name. This is helpful when multiple teams are using the same cluster and 
+there is a potential of name collision. It can be as a virtual wall between multiple clusters.
+
+Functionality of Namespace
+----------------------------------------------------------------------------------------
+Following are some of the important functionalities of a Namespace in Kubernetes −
+Namespaces help pod-to-pod communication using the same namespace.
+Namespaces are virtual clusters that can sit on top of the same physical cluster.
+They provide logical separation between the teams and their environments.
+=================================================================NAMESPACES=================================================================
+By default, a Kubernetes cluster is created with the following three namespaces:
+
+default: By default all the resource created in Kubernetes cluster are created in the default namespace. By default the default namespace can 
+        allow applications to run with unbounded CPU and memory requests/limits (Until someone set resource quota for the default namespace).
+kube-public: Namespace for resources that are publicly readable by all users. This namespace is generally reserved for cluster usage.
+kube-system: It is the Namespace for objects created by Kubernetes systems/control plane.
+============================================================================================================================================
+============================================================================================================================================
+
+$ kubectl create –f namespace.yml ---------> 1
+$ kubectl get namespace -----------------> 2
+$ kubectl get namespace <Namespace name> ------->3
+$ kubectl describe namespace <Namespace name> ---->4
+$ kubectl delete namespace <Namespace name>
+
+============================================================================================================================================
+============================================================================================================================================
+============================================================================================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+   name: dev
+   labels:
+     name: dev
+
+====================================================================================to create a pod========================================
+vi pod.yml
+
+kind: Pod                              
+apiVersion: v1                     
+metadata:                           
+  name: testpod                  
+spec:                                    
+  containers:                      
+    - name: c00                     
+      image: ubuntu              
+      command: ["/bin/bash", "-c", "while true; do echo Technical Guftgu; sleep 5 ; done"]
+  restartPolicy: Never       
+==============STEPS===================================================================================================================================
+1.  kubectl apply -f namespace.yml
+2.  kubectl apply -f pod.yml   #this will get created in default still BUT we need to deploy this into our name space "dev"
+3.  kubectl apply -f pod.yml -n dev
+4. kubectl get pods   # still it'll show default namespace pods which is still empty 
+5. kubectl get pods -n dev
+####Everytime its going to default so if we need to set dev as default namespace now on then
+6. kubectl config set-context $(kubectl config current-context) --namespace=dev
+### if want to check current name space
+7. kubectl config view | grep namespace:
+
+=================================================================================================================================================
+
+$ kubectl config set-context $(kubectl config current-context) --namespace=dev      #Redirect always to our current namespace eg:dev instead
+  of default
+$ kubectl config view | grep namespace:
+==============================================================================================
